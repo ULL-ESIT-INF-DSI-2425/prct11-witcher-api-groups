@@ -9,7 +9,7 @@
     "doc": "typedoc",
     "coverage": "vitest run --coverage --coverage.include src/controllers/*",
     "build": "tsc",
-    "start": "node dist/main.js"
+    "start": "node dist/index.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "@eslint/json": "^0.12.0",
+    "@types/node": "^22.15.12",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-tsdoc": "^0.4.0",
