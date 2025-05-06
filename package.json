@@ -1,0 +1,36 @@
+{
+  "name": "prct11-witcher-api-groups",
+  "version": "1.0.0",
+  "description": "[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/iigoPlD8) [![Open in Codespaces](https://classroom.github.com/assets/launch-codespace-2972f46106e565e64193e422d61a12cf1da4916b45550586e14ef0a7c637dd04.svg)](https://classroom.github.com/open-in-codespaces?assignment_repo_id=19430387)",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "prettier": "prettier --write .",
+    "doc": "typedoc",
+    "coverage": "vitest run --coverage --coverage.include src/controllers/*",
+    "build": "tsc",
+    "start": "node dist/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ULL-ESIT-INF-DSI-2425/prct11-witcher-api-groups.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ULL-ESIT-INF-DSI-2425/prct11-witcher-api-groups/issues"
+  },
+  "homepage": "https://github.com/ULL-ESIT-INF-DSI-2425/prct11-witcher-api-groups#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "@eslint/json": "^0.12.0",
+    "eslint": "^9.26.0",
+    "eslint-config-prettier": "^10.1.2",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "tsc-watch": "^6.2.1",
+    "typescript-eslint": "^8.32.0"
+  }
+}
