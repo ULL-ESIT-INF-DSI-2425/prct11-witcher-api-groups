@@ -1,7 +1,7 @@
 import { connect } from 'mongoose';
 
 export async function connectMongoose() {
-  const uri = 'mongodb://127.0.0.1:27017/Lobo-Blanco';
+  const uri = process.env.MONGODB_URL!;
   try {
     await connect(uri);
     console.log('Connected to MongoDB via Mongoose');
