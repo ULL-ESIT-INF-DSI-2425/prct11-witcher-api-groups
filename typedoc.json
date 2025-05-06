@@ -1,0 +1,6 @@
+{
+  "entryPoints": ["src/+.ts"],
+  "out": "./docs",
+  "name": "/prct11-witcher-api-groups",
+  "readme": "README.md"
+}
