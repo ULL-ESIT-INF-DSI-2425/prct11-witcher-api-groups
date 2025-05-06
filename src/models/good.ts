@@ -14,28 +14,29 @@ const goodSchema = new Schema<GoodDocument>({
   id: {
     type: Number,
     required: true,
-    unique: true,
+    unique: true,    
     min: [1, 'El id debe ser positivo'],
   },
   name: {
     type: String,
     required: [true, 'El nombre es obligatorio'],
-    trim: true,
+    trim: true,                 
     minlength: [3, 'El nombre debe tener al menos 3 caracteres'],
     validate: {
-      // ejemplo de validador propio: sin caracteres especiales
       validator: (v: string) => validator.isAlphanumeric(v, 'es-ES', { ignore: ' ' }),
       message: props => `El nombre "${props.value}" solo puede contener caracteres alfanuméricos y espacios`,
     },
   },
   description: {
     type: String,
+    trim: true,
     default: '',
     maxlength: [200, 'La descripción no puede exceder 200 caracteres'],
   },
   material: {
     type: String,
     required: [true, 'El material es obligatorio'],
+    trim: true,
     enum: {
       values: ['madera', 'acero', 'plástico', 'aluminio', 'vidrio'],
       message: '{VALUE} no es un material permitido',
@@ -57,8 +58,8 @@ const goodSchema = new Schema<GoodDocument>({
     default: 0,
   },
 }, {
-  timestamps: true,
-  versionKey: false,
+  timestamps: true,           
+  versionKey: false,           
 });
 
 export const GoodModel = model<GoodDocument>('Good', goodSchema);

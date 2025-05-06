@@ -1,4 +1,4 @@
-import { connectMongoose } from '../db/mongodb-mongoose.js';
+import { connectMongoose } from '../db/mongoose.js';
 import { GoodModel } from '../models/good.js';
 
 async function insertOneGood() {

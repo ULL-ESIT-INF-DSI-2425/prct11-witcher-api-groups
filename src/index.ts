@@ -1,58 +1,41 @@
-// src/index.ts
-import { connectMongoose } from './db/mongodb-mongoose.js';
-import {
-  createGood,
-  findGoodById,
-  findGoodsByName,
-  updateOneGoodById,
-  updateGoodsByName,
-  deleteOneGoodById,
-  deleteGoodsByName,
-  GoodInput,
-} from './scripts/goodScript.js';
+import express, { Request, Response } from 'express';
+import { connectMongoose } from './db/mongoose.js';
+import { GoodModel, GoodDocument } from './models/good.js';
 
 async function main() {
   await connectMongoose();
 
-  const input: GoodInput = {
-    id:          10,
-    name:        'Mesa de madera',
-    description: 'Mesa reonda',
-    material:    'madera',
-    weight:      12,
-    value:       150,
-  };
-  const g1 = await createGood(input);
-  console.log('Creado:', g1);
+  const app = express();
+  const port = process.env.PORT || 3000;
 
-  console.log('Por ID:', await findGoodById(g1._id.toString()));
+  app.use(express.json());
 
-  console.log('Por nombre:', await findGoodsByName('Mes8 de madera'));
+  app.post('/goods', (req: Request, res: Response) => {
+    const good = new GoodModel(req.body as Partial<GoodDocument>);
+    good.save()
+      .then(saved => res.status(201).json(saved))
+      .catch(err => res.status(400).json(err));
+  });
 
-  console.log(
-    'Actualizado:',
-    await updateOneGoodById(g1._id.toString(), { value: 175 })
-  );
+  app.get('/goods', async (_req: Request, res: Response) => {
+    try {
+      const goods = await GoodModel.find().exec();
+      res.json(goods);
+    } catch (err) {
+      res.status(500).json({ message: 'Error al recuperar bienes' });
+    }
+  });
 
-  console.log(
-    'Modificados:',
-    await updateGoodsByName('Mesa de madera', { description: 'Mesa redonda de pino' })
-  );
+  app.all('/{*splat}', (_, res) => {
+    res.status(501).send();
+  });
 
-  console.log(
-    'Borrados uno:',
-    await deleteOneGoodById(g1._id.toString())
-  );
-
-  console.log(
-    'Borrados varios:',
-    await deleteGoodsByName('Mesa de madera')
-  );
-
-  process.exit(0);
+  app.listen(port, () => {
+    console.log(`API REST de bienes escuchando en http://localhost:${port}`);
+  });
 }
 
 main().catch(err => {
-  console.error(err);
+  console.error('Error arrancando servidor:', err);
   process.exit(1);
 });
