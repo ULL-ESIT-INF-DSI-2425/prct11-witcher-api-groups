@@ -1,15 +1,9 @@
 import express, { Request, Response } from 'express';
-import { TransactionModel, TransactionDocument, TransactionType } from '../models/transaction.js';
+import { TransactionModel, TransactionType } from '../models/transaction.js';
 import { GoodModel } from '../models/good.js';
 import { HunterModel } from '../models/hunter.js';
 import { MerchantModel } from '../models/merchant.js';
 
-/**
- * Interfaces personalizadas para tipado de requests
- */
-interface TypedRequest<T> extends Request {
-  body: T;
-}
 
 /**
  * Estructura para la creación de nuevas transacciones
@@ -74,7 +68,7 @@ const handleError = (res: Response, error: unknown) => {
  *   ]
  * }
  */
-transactionsRouter.post('/', async (req: Request<{}, {}, CreateTransactionRequest>, res: Response) => {
+transactionsRouter.post('/', async (req: Request<Record<string, unknown>, object, CreateTransactionRequest>, res: Response) => {
   try {
     const { type, clientName, items } = req.body;
 
@@ -156,30 +150,30 @@ transactionsRouter.post('/', async (req: Request<{}, {}, CreateTransactionReques
  * @example
  * GET /transactions/client?clientName=Zoltan
  */
-transactionsRouter.get('/client', async (req: Request<{}, {}, {}, { clientName: string }>, res: Response) => {
+transactionsRouter.get('/client', async (req: Request<Record<string, unknown>, object, object, { clientName: string }>, res: Response) => {
   try {
     const { clientName } = req.query;
-  
+
     if (!clientName || typeof clientName !== 'string') {
       res.status(400).json({ error: 'Se requiere el nombre del cliente' });
       return;
     }
-  
+
     // Buscar cliente (puede ser cazador o mercader)
     const hunter = await HunterModel.findOne({ name: clientName });
     const merchant = await MerchantModel.findOne({ name: clientName });
     const client = hunter || merchant;
-  
+
     if (!client) {
       res.status(404).json({ error: 'Cliente no encontrado' });
       return;
     }
-  
+
     // Obtener transacciones con datos poblados
     const transactions = await TransactionModel.find({ client: client._id })
       .populate('client')
       .populate('items.good');
-  
+
     res.json(transactions);
   } catch (error) {
     handleError(res, error);
@@ -200,36 +194,42 @@ transactionsRouter.get('/client', async (req: Request<{}, {}, {}, { clientName: 
  * @example
  * GET /transactions/date-range?startDate=2023-01-01&endDate=2023-12-31&type=sale
  */
-transactionsRouter.get('/date-range', async (req: Request<{}, {}, {}, DateRangeRequest>, res: Response) => {
+transactionsRouter.get('/date-range', async (req: Request<Record<string, unknown>, object, object, DateRangeRequest>, res: Response) => {
   try {
     const { startDate, endDate, type } = req.query;
-  
+
     if (!startDate || !endDate) {
       res.status(400).json({ error: 'Se requieren fechas de inicio y fin' });
       return;
     }
-  
-    const filter: any = {
-      date: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
-      },
+
+    // Definir el tipo del filtro
+    const filter: {
+      date?: { $gte: Date; $lte: Date };
+      type?: TransactionType;
+    } = {};
+
+    // Agregar rango de fechas al filtro
+    filter.date = {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate),
     };
-  
+
+    // Agregar tipo de transacción al filtro si está presente
     if (type && ['purchase', 'sale'].includes(type)) {
-      filter.type = type;
+      filter.type = type as TransactionType;
     }
-  
+
     const transactions = await TransactionModel.find(filter)
       .populate('client')
       .populate('items.good');
-  
+
     res.json(transactions);
   } catch (error) {
     handleError(res, error);
   }
 });
-  
+
 /**
  * Obtiene una transacción específica por su ID
  * 
