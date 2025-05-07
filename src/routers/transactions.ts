@@ -294,3 +294,102 @@ transactionsRouter.delete('/:id', async (req: Request<{ id: string }>, res: Resp
     handleError(res, error);
   }
 });
+
+/**
+ * Actualiza una transacción existente
+ * 
+ * @route PUT /transactions/:id
+ * @param {string} req.params.id - ID de la transacción a actualizar
+ * @param {CreateTransactionRequest} req.body - Nuevos datos de la transacción
+ * @returns {TransactionDocument} 200 - Transacción actualizada exitosamente
+ * @returns {Object} 400 - Error en los datos de entrada
+ * @returns {Object} 404 - Transacción no encontrada
+ * @returns {Object} 500 - Error del servidor
+ * 
+ * @example
+ * PUT /transactions/507f1f77bcf86cd799439011
+ * {
+ *   "type": "sale",
+ *   "clientName": "Yennefer",
+ *   "items": [
+ *     { "goodName": "Libro de hechizos", "quantity": 2 }
+ *   ]
+ * }
+ */
+transactionsRouter.put('/:id', async (req: Request<{ id: string }, object, CreateTransactionRequest>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { type, clientName, items } = req.body;
+
+    if (!type || !['purchase', 'sale'].includes(type)) {
+      res.status(400).json({ error: 'Tipo de transacción no válido' });
+      return;
+    }
+
+    const transaction = await TransactionModel.findById(id);
+    if (!transaction) {
+      res.status(404).json({ error: 'Transacción no encontrada' });
+      return;
+    }
+
+    // Buscar cliente según tipo de transacción
+    const client = type === 'purchase'
+      ? await HunterModel.findOne({ name: clientName })
+      : await MerchantModel.findOne({ name: clientName });
+
+    if (!client) {
+      res.status(404).json({ error: 'Cliente no encontrado' });
+      return;
+    }
+
+    const processedItems = [];
+    let totalAmount = 0;
+
+    // Revertir cambios en el stock de los bienes de la transacción anterior
+    for (const item of transaction.items) {
+      const good = await GoodModel.findById(item.good);
+      if (good) {
+        good.stock += transaction.type === 'purchase' ? item.quantity : -item.quantity;
+        await good.save();
+      }
+    }
+
+    // Procesar los nuevos items
+    for (const item of items) {
+      const good = await GoodModel.findOne({ name: item.goodName });
+      if (!good) {
+        res.status(404).json({ error: `Bien no encontrado: ${item.goodName}` });
+        return;
+      }
+
+      if (type === 'purchase' && good.stock < item.quantity) {
+        res.status(400).json({ error: `Stock insuficiente para: ${item.goodName}` });
+        return;
+      }
+
+      const itemTotal = good.value * item.quantity;
+      totalAmount += itemTotal;
+
+      processedItems.push({
+        good: good._id,
+        quantity: item.quantity,
+        priceAtTransaction: good.value,
+      });
+
+      good.stock += type === 'purchase' ? -item.quantity : item.quantity;
+      await good.save();
+    }
+
+    // Actualizar la transacción
+    transaction.type = type;
+    transaction.client = client._id as any; // Forzamos el tipo para que sea compatible
+    transaction.clientModel = type === 'purchase' ? 'Hunter' : 'Merchant';
+    transaction.items = processedItems;
+    transaction.totalAmount = totalAmount;
+
+    const updatedTransaction = await transaction.save();
+    res.json(updatedTransaction);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
