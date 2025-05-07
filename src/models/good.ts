@@ -8,6 +8,7 @@ export interface GoodDocument extends Document {
   material: string;
   weight: number;
   value: number;
+  stock: number;
 }
 
 const goodSchema = new Schema<GoodDocument>({
@@ -56,6 +57,12 @@ const goodSchema = new Schema<GoodDocument>({
     required: [true, 'El valor es obligatorio'],
     min: [0, 'El valor no puede ser negativo'],
     default: 0,
+  },
+  stock: {
+    type: Number,
+    required: true,
+    min: [0, 'El stock no puede ser negativo'],
+    default: 0
   },
 }, {
   timestamps: true,           

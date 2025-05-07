@@ -5,7 +5,7 @@ import { goodsRouter }   from './routers/goods.js';
 import { merchantsRouter } from './routers/merchants.js';
 import { huntersRouter }   from './routers/hunters.js';
 import { defaultRouter }   from './routers/default.js';
-
+import { transactionsRouter } from './routers/transactions.js';
 const app = express();
 
 // **1. JSON body‐parser**
@@ -15,6 +15,7 @@ app.use(express.json());
 app.use(goodsRouter);
 app.use(merchantsRouter);
 app.use(huntersRouter);
+app.use(transactionsRouter);
 app.use(defaultRouter);
 
 /**  
