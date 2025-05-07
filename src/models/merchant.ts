@@ -1,16 +1,31 @@
 import { Document, model, Schema } from 'mongoose';
 import validator from 'validator';
 
+/**
+ * Interfaz que representa un documento de Comerciante en la base de datos.
+ * Extiende la interfaz Document de Mongoose para incluir los campos específicos de un Comerciante.
+ */
 export interface MerchantDocument extends Document {
+  /** Nombre completo del comerciante (mínimo 3 caracteres alfanuméricos) */
   name: string;
+  /** Ubicación principal del comerciante */
   location: string;
+  /** Especialidad comercial (debe ser uno de los valores permitidos) */
   specialty: string;
+  /** Indica si el comerciante está actualmente de viaje */
   isTraveling: boolean;
+  /** Capacidad del inventario (entre 1 y 100 espacios) */
   inventorySize: number;
+  /** Nivel de reputación (escala de 0 a 10) */
   reputation: number;
+  /** Información de contacto opcional (email válido si se proporciona) */
   contact?: string;
 }
 
+/**
+ * Esquema de Mongoose que define la estructura, validaciones y configuraciones
+ * para los documentos de Comerciante en la base de datos.
+ */
 const merchantSchema = new Schema<MerchantDocument>({
   name: {
     type: String,
@@ -66,4 +81,8 @@ const merchantSchema = new Schema<MerchantDocument>({
   versionKey: false,
 });
 
+/**
+ * Modelo de Mongoose para la colección de Comerciantes.
+ * Proporciona métodos para interactuar con la colección 'merchants' en MongoDB.
+ */
 export const MerchantModel = model<MerchantDocument>('Merchant', merchantSchema);

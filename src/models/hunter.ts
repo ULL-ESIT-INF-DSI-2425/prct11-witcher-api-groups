@@ -1,17 +1,33 @@
 import { Document, model, Schema } from 'mongoose';
 import validator from 'validator';
 
+/**
+ * Interfaz que representa un documento de Cazador en la base de datos.
+ * Extiende la interfaz Document de Mongoose para incluir los campos específicos de un Cazador.
+ */
 export interface HunterDocument extends Document {
+  /** Nombre completo del cazador (mínimo 3 caracteres alfanuméricos) */
   name: string;
+  /** Tipo/clase de cazador (debe ser uno de los valores permitidos) */
   type: string;
+  /** Nivel de experiencia (entre 0 y 100) */
   experience: number;
+  /** Arma preferida (opcional) */
   preferredWeapon?: string;
+  /** Cantidad de monedas/riqueza (no puede ser negativo) */
   coins: number;
+  /** Estado de actividad del cazador */
   isActive: boolean;
+  /** Email de contacto (opcional, debe ser válido si se proporciona) */
   email?: string;
+  /** Lista de especialidades en tipos de monstruos (mínimo 1 especialidad) */
   monsterSpecialty: string[];
 }
 
+/**
+ * Esquema de Mongoose que define la estructura, validaciones y configuraciones
+ * para los documentos de Cazador en la base de datos.
+ */
 const hunterSchema = new Schema<HunterDocument>({
   name: {
     type: String,
@@ -75,4 +91,8 @@ const hunterSchema = new Schema<HunterDocument>({
   versionKey: false,
 });
 
+/**
+ * Modelo de Mongoose para la colección de Cazadores.
+ * Proporciona métodos para interactuar con la colección 'hunters' en MongoDB.
+ */
 export const HunterModel = model<HunterDocument>('Hunter', hunterSchema);

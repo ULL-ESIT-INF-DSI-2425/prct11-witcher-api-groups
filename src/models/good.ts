@@ -1,16 +1,31 @@
 import { Document, model, Schema } from 'mongoose';
 import validator from 'validator';
 
+/**
+ * Interfaz que representa un documento de Bien en la base de datos.
+ * Extiende la interfaz Document de Mongoose para incluir campos específicos de un Bien.
+ */
 export interface GoodDocument extends Document {
+  /** Identificador único del bien (debe ser positivo) */
   id: number;
+  /** Nombre del bien (entre 3 y 200 caracteres alfanuméricos) */
   name: string;
+  /** Descripción opcional del bien (hasta 200 caracteres) */
   description?: string;
+  /** Material del bien (debe ser uno de los valores permitidos) */
   material: string;
+  /** Peso del bien en unidades (entre 0 y 1000) */
   weight: number;
+  /** Valor monetario del bien (no puede ser negativo) */
   value: number;
+  /** Cantidad disponible en inventario (no puede ser negativo) */
   stock: number;
 }
 
+/**
+ * Esquema de Mongoose que define la estructura y validaciones
+ * para los documentos de Bien en la base de datos.
+ */
 const goodSchema = new Schema<GoodDocument>({
   id: {
     type: Number,
@@ -65,8 +80,12 @@ const goodSchema = new Schema<GoodDocument>({
     default: 0
   },
 }, {
-  timestamps: true,           
-  versionKey: false,           
+  timestamps: true,        
+  versionKey: false,         
 });
 
+/**
+ * Modelo de Mongoose para la colección de Bienes.
+ * Proporciona métodos para interactuar con la colección 'goods' en la base de datos.
+ */
 export const GoodModel = model<GoodDocument>('Good', goodSchema);
