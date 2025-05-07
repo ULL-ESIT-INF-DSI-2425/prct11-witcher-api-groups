@@ -382,7 +382,7 @@ transactionsRouter.put('/:id', async (req: Request<{ id: string }, object, Creat
 
     // Actualizar la transacción
     transaction.type = type;
-    transaction.client = client._id as any; // Forzamos el tipo para que sea compatible
+    transaction.client = client._id as any; 
     transaction.clientModel = type === 'purchase' ? 'Hunter' : 'Merchant';
     transaction.items = processedItems;
     transaction.totalAmount = totalAmount;
