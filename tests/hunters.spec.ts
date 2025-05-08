@@ -31,6 +31,52 @@ beforeEach(async () => {
 });
 
 describe("CRUD completo de /hunters", () => {
+  test("POST /hunters → 201 y crea correctamente en DB", async () => {
+    const hunter = {
+      name: "Geralt123",
+      type: "brujo",
+      experience: 80,
+      preferredWeapon: "Espada de plata",
+      coins: 100,
+      isActive: true,
+      email: "geralt@example.com",
+      monsterSpecialty: ["estriges"],
+    };
+    const before = await HunterModel.countDocuments();
+    const res = await request(app).post("/hunters").send(hunter).expect(201);
+    expect(res.body).toMatchObject({
+      name: hunter.name,
+      type: hunter.type,
+      experience: hunter.experience,
+      coins: hunter.coins,
+      isActive: hunter.isActive,
+      email: hunter.email,
+      monsterSpecialty: hunter.monsterSpecialty,
+    });
+    expect(res.body).toHaveProperty("_id");
+    const after = await HunterModel.countDocuments();
+    expect(after).toBe(before + 1);
+    const fromDb = await HunterModel.findById(res.body._id).lean();
+    expect(fromDb).not.toBeNull();
+    expect(fromDb).toMatchObject(hunter);
+  });
+
+  test("POST /hunters → 400 si falta campo required y no crea documento", async () => {
+    const bad = {
+      type: "brujo",
+      experience: 50,
+      coins: 10,
+      isActive: true,
+      monsterSpecialty: ["vampiros"],
+      email: "vamp@example.com",
+    };
+    const before = await HunterModel.countDocuments();
+    const res = await request(app).post("/hunters").send(bad).expect(400);
+    expect(res.body).toHaveProperty("errors.name");
+    const after = await HunterModel.countDocuments();
+    expect(after).toBe(before);
+  });
+
   test("POST /hunters → 201 crea buen cazador válido", async () => {
     const hunter = {
       name: "Geralt123",
@@ -149,6 +195,47 @@ describe("CRUD completo de /hunters", () => {
     ]);
     const res = await request(app).get("/hunters").expect(200);
     expect(res.body).toHaveLength(2);
+  });
+
+  test("GET /hunters → 200 y lista todos con campos correctos", async () => {
+    const docs = await HunterModel.create([
+      {
+        name: "Hun2",
+        type: "aldeano",
+        experience: 1,
+        coins: 1,
+        isActive: false,
+        email: "h1@example.com",
+        monsterSpecialty: ["ratas"],
+      },
+      {
+        name: "H222",
+        type: "caballero",
+        experience: 20,
+        coins: 10,
+        isActive: true,
+        email: "h2@example.com",
+        monsterSpecialty: ["trolls"],
+      },
+    ]);
+    const res = await request(app).get("/hunters").expect(200);
+    expect(res.body).toHaveLength(2);
+    const returned = res.body;
+    const returnedNames = returned.map((h: any) => h.name);
+    expect(returnedNames).toEqual(expect.arrayContaining(["Hun2", "H222"]));
+    docs.forEach((doc) => {
+      const match = returned.find((h: any) => h.name === doc.name);
+      expect(match).toBeDefined();
+      expect(match).toMatchObject({
+        name: doc.name,
+        type: doc.type,
+        experience: doc.experience,
+        coins: doc.coins,
+        isActive: doc.isActive,
+        email: doc.email,
+        monsterSpecialty: doc.monsterSpecialty,
+      });
+    });
   });
 
   test("GET /hunters?name=H1 → 200 y filtra por name", async () => {
@@ -308,6 +395,44 @@ describe("CRUD completo de /hunters", () => {
   test("PATCH /hunters/:id → 404 si no existe", async () => {
     const fake = new mongoose.Types.ObjectId().toString();
     await request(app).patch(`/hunters/${fake}`).send({ coins: 1 }).expect(404);
+  });
+
+  test("PATCH /hunters?name=ByName → 200 modifica y persiste en DB", async () => {
+    await HunterModel.create({
+      name: "ByName",
+      type: "brujo",
+      experience: 10,
+      coins: 10,
+      isActive: true,
+      email: "byname@example.com",
+      monsterSpecialty: ["zombis"],
+    });
+    const res = await request(app)
+      .patch("/hunters")
+      .query({ name: "ByName" })
+      .send({ coins: 20 })
+      .expect(200);
+    expect(res.body.coins).toBe(20);
+    const fromDb = await HunterModel.findOne({ name: "ByName" }).lean();
+    expect(fromDb).not.toBeNull();
+    expect(fromDb!.coins).toBe(20);
+  });
+
+  test("DELETE /hunters/:id → 200 elimina y revierte estado en DB", async () => {
+    const doc = await HunterModel.create({
+      name: "XIdDel",
+      type: "aldeano",
+      experience: 2,
+      coins: 2,
+      isActive: false,
+      email: "xiddel@example.com",
+      monsterSpecialty: ["murciélagos"],
+    });
+    const before = await HunterModel.countDocuments();
+    await request(app).delete(`/hunters/${doc._id}`).expect(200);
+    const after = await HunterModel.countDocuments();
+    expect(after).toBe(before - 1);
+    expect(await HunterModel.findById(doc._id)).toBeNull();
   });
 
   test("DELETE /hunters?name=ValidName → 200 elimina por name", async () => {

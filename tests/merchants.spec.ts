@@ -363,4 +363,126 @@ describe("CRUD completo de /merchants", () => {
   test("DELETE /merchants/:id → 400 id mal formado", async () => {
     await request(app).delete("/merchants/1234").expect(400);
   });
+
+  test("POST /merchants → 201 y crea correctamente en DB", async () => {
+    const merchant = {
+      name: "Merch1",
+      location: "Novigrado",
+      specialty: "herrero",
+      isTraveling: false,
+      inventorySize: 10,
+      reputation: 5,
+      contact: "shop@example.com",
+    };
+    const before = await MerchantModel.countDocuments();
+    const res = await request(app).post("/merchants").send(merchant).expect(201);
+    expect(res.body).toMatchObject({
+      name: merchant.name,
+      location: merchant.location,
+      specialty: merchant.specialty,
+      isTraveling: merchant.isTraveling,
+      inventorySize: merchant.inventorySize,
+      reputation: merchant.reputation,
+      contact: merchant.contact,
+    });
+    expect(res.body).toHaveProperty("_id");
+    const after = await MerchantModel.countDocuments();
+    expect(after).toBe(before + 1);
+    const fromDb = await MerchantModel.findById(res.body._id).lean();
+    expect(fromDb).not.toBeNull();
+    expect(fromDb).toMatchObject(merchant);
+  });
+
+  test("POST /merchants → 400 si falta campo required y no crea documento", async () => {
+    const bad = {
+      location: "Oxenfurt",
+      specialty: "alquimista",
+      isTraveling: true,
+      inventorySize: 5,
+      reputation: 3,
+      contact: "contact@ex.com",
+    };
+    const before = await MerchantModel.countDocuments();
+    const res = await request(app).post("/merchants").send(bad).expect(400);
+    expect(res.body).toHaveProperty("errors.name");
+    const after = await MerchantModel.countDocuments();
+    expect(after).toBe(before);
+  });
+
+  test("GET /merchants → 200 y lista todos con campos correctos", async () => {
+    const docs = await MerchantModel.create([
+      {
+        name: "Mer1",
+        location: "Novigrado",
+        specialty: "sastre",
+        isTraveling: false,
+        inventorySize: 15,
+        reputation: 4,
+        contact: "mer1@ex.com",
+      },
+      {
+        name: "Mer2",
+        location: "Oxenfurt",
+        specialty: "armero",
+        isTraveling: true,
+        inventorySize: 20,
+        reputation: 6,
+        contact: "mer2@ex.com",
+      },
+    ]);
+    const res = await request(app).get("/merchants").expect(200);
+    expect(res.body).toHaveLength(2);
+    const returnedNames = res.body.map((m: any) => m.name);
+    expect(returnedNames).toEqual(expect.arrayContaining(["Mer1", "Mer2"]));
+    docs.forEach(doc => {
+      const match = res.body.find((m: any) => m.name === doc.name);
+      expect(match).toBeDefined();
+      expect(match).toMatchObject({
+        name: doc.name,
+        location: doc.location,
+        specialty: doc.specialty,
+        isTraveling: doc.isTraveling,
+        inventorySize: doc.inventorySize,
+        reputation: doc.reputation,
+        contact: doc.contact,
+      });
+    });
+  });
+
+  test("PATCH /merchants?name=ByName → 200 modifica y persiste en DB", async () => {
+    await MerchantModel.create({
+      name: "ByName",
+      location: "Novigrado",
+      specialty: "herrero",
+      isTraveling: false,
+      inventorySize: 20,
+      reputation: 7,
+      contact: "byname@ex.com",
+    });
+    const res = await request(app)
+      .patch("/merchants")
+      .query({ name: "ByName" })
+      .send({ reputation: 9 })
+      .expect(200);
+    expect(res.body.reputation).toBe(9);
+    const fromDb = await MerchantModel.findOne({ name: "ByName" }).lean();
+    expect(fromDb!.reputation).toBe(9);
+  });
+
+  test("DELETE /merchants/:id → 200 elimina y persiste en DB", async () => {
+    const doc = await MerchantModel.create({
+      name: "XIdDel",
+      location: "Novigrado",
+      specialty: "sastre",
+      isTraveling: true,
+      inventorySize: 12,
+      reputation: 9,
+      contact: "xiddel@ex.com",
+    });
+    const before = await MerchantModel.countDocuments();
+    await request(app).delete(`/merchants/${doc._id}`).expect(200);
+    const after = await MerchantModel.countDocuments();
+    expect(after).toBe(before - 1);
+    expect(await MerchantModel.findById(doc._id)).toBeNull();
+  });
 });

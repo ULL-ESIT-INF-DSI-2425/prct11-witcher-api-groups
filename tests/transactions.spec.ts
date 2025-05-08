@@ -303,4 +303,128 @@ describe("/transactions CRUD y validaciones", () => {
     const found = await TransactionModel.findById(tx._id);
     expect(found).toBeNull();
   });
+
+  test("POST compra exitosa → 201, descuenta stock y crea transacción en DB", async () => {
+    const { hunter } = await seedData();
+    const beforeGoods = await GoodModel.find().lean();
+    const beforeTx = await TransactionModel.countDocuments();
+
+    const res = await request(app)
+      .post("/transactions")
+      .send({ type: "purchase", clientName: hunter.name, items: [
+        { goodName: "Espada de plata", quantity: 2 },
+        { goodName: "Poción de salud", quantity: 1 },
+      ]})
+      .expect(201);
+
+    expect(res.body).toMatchObject({ type: "purchase" });
+    expect(res.body).toHaveProperty("totalAmount");
+    expect(res.body.items).toHaveLength(2);
+    const afterTx = await TransactionModel.countDocuments();
+    expect(afterTx).toBe(beforeTx + 1);
+    const txFromDb = await TransactionModel.findById(res.body._id).lean();
+    expect(txFromDb).not.toBeNull();
+    expect(txFromDb).not.toBeNull();
+    expect(txFromDb!.type).toBe("purchase");
+
+    const sword = await GoodModel.findOne({ name: "Espada de plata" });
+    const potion = await GoodModel.findOne({ name: "Poción de salud" });
+    expect(sword!.stock).toBe(beforeGoods.find(g => g.name === sword!.name)!.stock - 2);
+    expect(potion!.stock).toBe(beforeGoods.find(g => g.name === potion!.name)!.stock - 1);
+  });
+
+  test("POST venta exitosa → 201, incrementa stock y crea transacción en DB", async () => {
+    const { merchant } = await seedData();
+    const beforeGoods = await GoodModel.find().lean();
+    const beforeTx = await TransactionModel.countDocuments();
+
+    const res = await request(app)
+      .post("/transactions")
+      .send({ type: "sale", clientName: merchant.name, items: [
+        { goodName: "Espada de plata", quantity: 5 }
+      ]})
+      .expect(201);
+
+    expect(res.body.type).toBe("sale");
+    expect(res.body).toHaveProperty("totalAmount");
+    const afterTx = await TransactionModel.countDocuments();
+    expect(afterTx).toBe(beforeTx + 1);
+
+    const sword = await GoodModel.findOne({ name: "Espada de plata" });
+    expect(sword!.stock).toBe(beforeGoods.find(g => g.name === sword!.name)!.stock + 5);
+  });
+
+  test("POST /transactions → 400 si falta tipo y no crea transacción", async () => {
+    await seedData();
+    const beforeTx = await TransactionModel.countDocuments();
+    const res = await request(app)
+      .post("/transactions")
+      .send({
+        clientName: "Geralt",
+        items: [{ goodName: "Espada de plata", quantity: 1 }],
+      })
+      .expect(400);
+    expect(res.body).toHaveProperty("error");
+    const afterTx = await TransactionModel.countDocuments();
+    expect(afterTx).toBe(beforeTx);
+  });
+  
+  test("GET /transactions/client → 200 filtra por cliente", async () => {
+    const { hunter, merchant } = await seedData();
+    await TransactionModel.create({ type: "purchase", client: hunter._id, clientModel: "Hunter", items: [{ good: (await GoodModel.findOne({ name: "Espada de plata" }))!._id, quantity: 1, priceAtTransaction: 250 }], totalAmount: 250 });
+    await TransactionModel.create({ type: "sale", client: merchant._id, clientModel: "Merchant", items: [{ good: (await GoodModel.findOne({ name: "Poción de salud" }))!._id, quantity: 2, priceAtTransaction: 50 }], totalAmount: 100 });
+
+    const res = await request(app).get("/transactions/client").query({ clientName: hunter.name }).expect(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].type).toBe("purchase");
+  });
+
+  test("GET /transactions/date-range → 200 filtra por rango y tipo opcional", async () => {
+    const { hunter, merchant } = await seedData();
+    const sword = (await GoodModel.findOne({ name: "Espada de plata" }))!;
+    const t1 = { type: "purchase", client: hunter._id, clientModel: "Hunter", items: [{ good: sword._id, quantity: 1, priceAtTransaction: sword.value }], totalAmount: sword.value, date: new Date("2025-01-01") };
+    const t2 = { type: "sale", client: merchant._id, clientModel: "Merchant", items: [{ good: sword._id, quantity: 1, priceAtTransaction: sword.value }], totalAmount: sword.value, date: new Date("2025-02-01") };
+    await TransactionModel.create([t1, t2]);
+
+    let res = await request(app).get("/transactions/date-range").query({ startDate: "2025-01-01", endDate: "2025-01-31" }).expect(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].date).toContain("2025-01");
+
+    res = await request(app).get("/transactions/date-range").query({ startDate: "2025-01-01", endDate: "2025-12-31", type: "sale" }).expect(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].type).toBe("sale");
+  });
+
+  test("GET /transactions/:id → 200 retorna transacción y 404 si no existe", async () => {
+    const { hunter } = await seedData();
+    const tx = await TransactionModel.create({ type: "purchase", client: hunter._id, clientModel: "Hunter", items: [{ good: (await GoodModel.findOne({ name: "Espada de plata" }))!._id, quantity: 1, priceAtTransaction: 250 }], totalAmount: 250 }) as mongoose.Document & { _id: mongoose.Types.ObjectId };
+    const res = await request(app).get(`/transactions/${tx._id}`).expect(200);
+    expect(res.body._id).toBe(tx._id.toString());
+    const fake = new mongoose.Types.ObjectId();
+    await request(app).get(`/transactions/${fake}`).expect(404);
+  });
+
+  test("DELETE /transactions/:id → 200 elimina transacción y revierte stock en DB", async () => {
+    const { hunter } = await seedData();
+    const sword = (await GoodModel.findOne({ name: "Espada de plata" }))!;
+    const txDoc = await TransactionModel.create({
+      type: "purchase",
+      client: hunter._id,
+      clientModel: "Hunter",
+      items: [{ good: sword._id, quantity: 3, priceAtTransaction: sword.value }],
+      totalAmount: sword.value * 3,
+    }) as mongoose.Document & { _id: mongoose.Types.ObjectId };
+    const txId = txDoc._id.toString();
+    const beforeStock = (await GoodModel.findById(sword._id))!.stock;
+    const beforeTx = await TransactionModel.countDocuments();
+  
+    await request(app).delete(`/transactions/${txId}`).expect(200);
+  
+    const afterStock = (await GoodModel.findById(sword._id))!.stock;
+    expect(afterStock).toBe(beforeStock + 3);
+  
+    const afterTx = await TransactionModel.countDocuments();
+    expect(afterTx).toBe(beforeTx - 1);
+  });
+  
 });

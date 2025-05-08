@@ -24,7 +24,7 @@ beforeEach(async () => {
 });
 
 describe("CRUD completo de /goods", () => {
-  test("POST /goods → 201 (crea bien válido)", async () => {
+  test("POST /goods → 201 y crea correctamente en DB", async () => {
     const good = {
       id: 1,
       name: "BienUno",
@@ -33,16 +33,27 @@ describe("CRUD completo de /goods", () => {
       weight: 1,
       value: 10,
     };
-    await request(app).post("/goods").send(good).expect(201);
+    const before = await GoodModel.countDocuments();
+    const res = await request(app).post("/goods").send(good).expect(201);
+    expect(res.body).toMatchObject(good);
+    expect(res.body).toHaveProperty("_id");
+    const after = await GoodModel.countDocuments();
+    expect(after).toBe(before + 1);
+    const fromDb = await GoodModel.findById(res.body._id).lean();
+    expect(fromDb).not.toBeNull();
+    expect(fromDb).toMatchObject(good);
   });
 
-  test("POST /goods → 400 si falta campo required", async () => {
-    const bad = { name: "Bueno", material: "acero", weight: 2, value: 20 }; // falta id
+  test("POST /goods → 400 si falta campo required y no crea documento", async () => {
+    const bad = { name: "Bueno", material: "acero", weight: 2, value: 20 };
+    const before = await GoodModel.countDocuments();
     const res = await request(app).post("/goods").send(bad).expect(400);
     expect(res.body).toHaveProperty("errors.id");
+    const after = await GoodModel.countDocuments();
+    expect(after).toBe(before);
   });
 
-  test("POST /goods → 400 si material no permitido", async () => {
+  test("POST /goods → 400 si material no permitido y no crea documento", async () => {
     const bad = {
       id: 2,
       name: "BienDos",
@@ -50,25 +61,41 @@ describe("CRUD completo de /goods", () => {
       weight: 1.2,
       value: 5,
     };
+    const before = await GoodModel.countDocuments();
     const res = await request(app).post("/goods").send(bad).expect(400);
     expect(res.body.message).toMatch(/no es un material permitido/);
+    const after = await GoodModel.countDocuments();
+    expect(after).toBe(before);
   });
 
-  // GET /goods
   test("GET /goods → 404 si no hay ninguno", async () => {
     await request(app).get("/goods").expect(404);
   });
 
-  test("GET /goods → 200 y lista todos", async () => {
-    await GoodModel.create([
+  test("GET /goods → 200 y lista todos con campos correctos", async () => {
+    const docs = await GoodModel.create([
       { id: 3, name: "BienA", material: "plástico", weight: 3, value: 30 },
       { id: 4, name: "BienB", material: "vidrio", weight: 4, value: 40 },
     ]);
     const res = await request(app).get("/goods").expect(200);
     expect(res.body).toHaveLength(2);
+    const returned = res.body;
+    const returnedIds = returned.map((g: any) => g.id);
+    expect(returnedIds).toEqual(expect.arrayContaining([3, 4]));
+    docs.forEach((doc) => {
+      const match = returned.find((g: any) => g.id === doc.id);
+      expect(match).toBeDefined();
+      expect(match).toMatchObject({
+        id: doc.id,
+        name: doc.name,
+        material: doc.material,
+        weight: doc.weight,
+        value: doc.value,
+      });
+    });
   });
 
-  test("GET /goods?name=BienA → 200 y filtra por name", async () => {
+  test("GET /goods?name=FiltroX → 200 y filtra por name", async () => {
     await GoodModel.create({
       id: 5,
       name: "FiltroX",
@@ -120,7 +147,7 @@ describe("CRUD completo de /goods", () => {
     await request(app).get("/goods/1234").expect(500);
   });
 
-  test("PATCH /goods?name=BienA → 200 modifica por name", async () => {
+  test("PATCH /goods?name=OldName → 200 modifica por name y persiste en DB", async () => {
     await GoodModel.create({
       id: 8,
       name: "OldName",
@@ -134,6 +161,9 @@ describe("CRUD completo de /goods", () => {
       .send({ value: 88 })
       .expect(200);
     expect(res.body.value).toBe(88);
+    const updated = await GoodModel.findById(res.body._id).lean();
+    expect(updated).not.toBeNull();
+    expect(updated!.value).toBe(88);
   });
 
   test("PATCH /goods?name=… → 400 sin name", async () => {
@@ -144,7 +174,7 @@ describe("CRUD completo de /goods", () => {
     await request(app).patch("/goods").query({ name: "X" }).expect(400);
   });
 
-  test("PATCH /goods?name=… → 400 campo no permitido", async () => {
+  test("PATCH /goods?name=ValidName → 400 campo no permitido", async () => {
     await GoodModel.create({
       id: 9,
       name: "ValidName",
@@ -159,7 +189,7 @@ describe("CRUD completo de /goods", () => {
       .expect(400);
   });
 
-  test("PATCH /goods?name=… → 404 si no existe", async () => {
+  test("PATCH /goods?name=NonExist → 404 si no existe", async () => {
     await request(app)
       .patch("/goods")
       .query({ name: "NonExist" })
@@ -167,7 +197,7 @@ describe("CRUD completo de /goods", () => {
       .expect(404);
   });
 
-  test("PATCH /goods/:id → 200 modifica por id", async () => {
+  test("PATCH /goods/:id → 200 modifica por id y persiste en DB", async () => {
     const doc = await GoodModel.create({
       id: 10,
       name: "TenName",
@@ -180,6 +210,9 @@ describe("CRUD completo de /goods", () => {
       .send({ name: "TenName2" })
       .expect(200);
     expect(res.body.name).toBe("TenName2");
+    const updated = await GoodModel.findById(doc._id).lean();
+    expect(updated).not.toBeNull();
+    expect(updated!.name).toBe("TenName2");
   });
 
   test("PATCH /goods/:id → 400 sin body", async () => {
