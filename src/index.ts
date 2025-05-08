@@ -2,7 +2,7 @@ import { setupApp } from "./app.js";
 
 async function main() {
   const app = await setupApp();
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT ? Number(process.env.PORT) : 3000;
   app.listen(port, () => {
     console.log(`API REST escuchando en http://localhost:${port}`);
   });
