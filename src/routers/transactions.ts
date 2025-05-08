@@ -336,7 +336,6 @@ transactionsRouter.delete(
         return;
       }
 
-      // Revertir cambios en el stock de los bienes
       for (const item of transaction.items) {
         const good = await GoodModel.findById(item.good);
         if (good) {
@@ -402,7 +401,6 @@ transactionsRouter.put(
         return;
       }
 
-      // Buscar cliente según tipo de transacción
       const client =
         type === "purchase"
           ? await HunterModel.findOne({ name: clientName })
@@ -416,7 +414,6 @@ transactionsRouter.put(
       const processedItems: TransactionItem[] = [];
       let totalAmount = 0;
 
-      // Revertir cambios en el stock de los bienes de la transacción anterior
       for (const item of transaction.items) {
         const good = await GoodModel.findById(item.good);
         if (good) {
@@ -426,7 +423,6 @@ transactionsRouter.put(
         }
       }
 
-      // Procesar los nuevos items
       for (const item of items) {
         const good = await GoodModel.findOne({ name: item.goodName });
         if (!good) {
