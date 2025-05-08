@@ -1,9 +1,9 @@
 import express, { Request, Response } from 'express';
-import { TransactionModel, TransactionType } from '../models/transaction.js';
 import { GoodModel } from '../models/good.js';
 import { HunterModel } from '../models/hunter.js';
 import { MerchantModel } from '../models/merchant.js';
-
+import { Types } from 'mongoose';
+import { TransactionModel, TransactionType, TransactionItem } from '../models/transaction.js';
 
 /**
  * Estructura para la creación de nuevas transacciones
@@ -89,7 +89,7 @@ transactionsRouter.post('/', async (req: Request<Record<string, unknown>, object
       return;
     }
   
-    const processedItems = [];
+    const processedItems: TransactionItem[] = [];
     let totalAmount = 0;
 
     // Procesar cada item de la transacción
@@ -111,7 +111,7 @@ transactionsRouter.post('/', async (req: Request<Record<string, unknown>, object
       totalAmount += itemTotal;
 
       processedItems.push({
-        good: good._id,
+        good: good._id as Types.ObjectId,
         quantity: item.quantity,
         priceAtTransaction: good.value,
       });
@@ -338,7 +338,7 @@ transactionsRouter.put('/:id', async (req: Request<{ id: string }, object, Creat
       return;
     }
 
-    const processedItems = [];
+    const processedItems: TransactionItem[] = [];
     let totalAmount = 0;
 
     // Revertir cambios en el stock de los bienes de la transacción anterior
@@ -367,7 +367,7 @@ transactionsRouter.put('/:id', async (req: Request<{ id: string }, object, Creat
       totalAmount += itemTotal;
 
       processedItems.push({
-        good: good._id,
+        good: good._id as Types.ObjectId,
         quantity: item.quantity,
         priceAtTransaction: good.value,
       });
