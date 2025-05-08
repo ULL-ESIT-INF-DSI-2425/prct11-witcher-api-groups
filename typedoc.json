@@ -1,6 +1,12 @@
+// typedoc.json
 {
-  "entryPoints": ["src/**/*.ts"],
-  "out": "./docs",
-  "name": "/prct11-witcher-api-groups",
-  "readme": "README.md"
+  "entryPoints": ["src"],          // sólo la carpeta src
+  "out": "docs",                   // donde generar la doc
+  "exclude": [
+    "**/*.spec.ts",                // excluye tests
+    "**/vitest.config.ts"          // excluye tu config de Vitest
+  ],
+  "tsconfig": "tsconfig.json",     // tu tsconfig normal
+  "excludePrivate": true,
+  "excludeInternal": true
 }

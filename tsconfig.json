@@ -10,5 +10,5 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "exclude": ["tests", "node_modules", "dist"]
+  "exclude": ["tests", "node_modules", "dist", "src/**/*.spec.ts", "vitest.config.ts"]
 }

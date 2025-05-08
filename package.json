@@ -6,7 +6,7 @@
   "scripts": {
     "test": "env-cmd -f ./config/test.env vitest run index",
     "prettier": "prettier --write .",
-    "doc": "typedoc",
+    "doc": "typedoc --options typedoc.json",
     "coverage": "env-cmd -f ./config/test.env vitest run --coverage",
     "build": "tsc",
     "start": "node dist/index.js",
