@@ -7,7 +7,7 @@
     "test": "env-cmd -f ./config/test.env vitest run index",
     "prettier": "prettier --write .",
     "doc": "typedoc",
-    "coverage": "vitest run --coverage --coverage.include src/controllers/*",
+    "coverage": "env-cmd -f ./config/test.env vitest run tests/index.spec.ts --coverage --coverage.include='src/routers/**' --reporter=dot --coverage.reporter=text --silent",
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc-watch --onSuccess \"env-cmd -f ./config/dev.env node dist/index.js\"",
