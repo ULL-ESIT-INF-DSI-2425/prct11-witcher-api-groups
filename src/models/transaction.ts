@@ -113,6 +113,27 @@ const transactionSchema = new Schema<TransactionDocument>({
   versionKey: false
 });
 
+// src/models/transaction.ts
+import { GoodModel } from './good.js';  // ¡Importa el modelo Good!
+
+// ...
+
+// Antes de guardar una transacción nueva, ajusta el stock de cada item
+transactionSchema.pre('save', async function(next) {
+  if (!this.isNew) return next();
+
+  for (const item of this.items) {
+    const good = await GoodModel.findById(item.good);
+    if (!good) continue;
+
+    // purchase = comerciante compra → stock baja
+    // sale     = comerciante vende → stock sube
+    good.stock += (this.type === 'purchase' ? -item.quantity : item.quantity);
+    await good.save();
+  }
+  next();
+});
+
 /**
  * Modelo de Mongoose para la colección de Transacciones.
  * Proporciona métodos para interactuar con la colección 'transactions' en MongoDB.

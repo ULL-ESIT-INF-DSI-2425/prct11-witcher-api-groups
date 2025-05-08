@@ -1,9 +1,11 @@
-// tests/goods.spec.ts
-import { describe, beforeAll, afterAll, beforeEach, test, expect } from 'vitest';
+import { describe, beforeAll, beforeEach, test, expect } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { setupApp } from '../src/app.js';
 import { GoodModel } from '../src/models/good.js';
+import { HunterModel } from '../src/models/hunter.js';
+import { MerchantModel } from '../src/models/merchant.js';
+import { TransactionModel } from '../src/models/transaction.js';
 
 let app: ReturnType<typeof setupApp>;
 
@@ -12,16 +14,15 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await GoodModel.deleteMany({});
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
+  await Promise.all([
+    GoodModel.deleteMany({}),
+    HunterModel.deleteMany({}),
+    MerchantModel.deleteMany({}),
+    TransactionModel.deleteMany({}),
+  ]);
 });
 
 describe('CRUD completo de /goods', () => {
-
-  // POST /goods
   test('POST /goods → 201 (crea bien válido)', async () => {
     const good = {
       id:          1,
@@ -86,7 +87,6 @@ describe('CRUD completo de /goods', () => {
     expect(res.body[0].description).toBe('DescX');
   });
 
-  // GET /goods/:id
   test('GET /goods/:id → 200 si existe', async () => {
     const doc = await GoodModel.create({
       id:7,
@@ -108,7 +108,6 @@ describe('CRUD completo de /goods', () => {
     await request(app).get('/goods/1234').expect(500);
   });
 
-  // PATCH /goods?name=…
   test('PATCH /goods?name=BienA → 200 modifica por name', async () => {
     await GoodModel.create({ id:8, name:'OldName', material:'plástico', weight:8, value:80 });
     const res = await request(app)
@@ -144,7 +143,6 @@ describe('CRUD completo de /goods', () => {
       .expect(404);
   });
 
-  // PATCH /goods/:id
   test('PATCH /goods/:id → 200 modifica por id', async () => {
     const doc = await GoodModel.create({
       id:10,
@@ -193,7 +191,6 @@ describe('CRUD completo de /goods', () => {
       .expect(404);
   });
 
-  // DELETE /goods?name=…
   test('DELETE /goods?name=ValidName → 200 elimina por name', async () => {
     await GoodModel.create({
       id:13,
@@ -220,7 +217,6 @@ describe('CRUD completo de /goods', () => {
       .expect(404);
   });
 
-  // DELETE /goods/:id
   test('DELETE /goods/:id → 200 elimina por id', async () => {
     const doc = await GoodModel.create({
       id:14,
@@ -237,5 +233,4 @@ describe('CRUD completo de /goods', () => {
     const fake = new mongoose.Types.ObjectId().toString();
     await request(app).delete(`/goods/${fake}`).expect(404);
   });
-
 });

@@ -28,7 +28,7 @@ export const huntersRouter = express.Router();
  *   "monsterSpecialty": ["vampiros", "quimeras"]
  * }
  */
-huntersRouter.post('/hunters', (req: Request, res: Response) => {
+huntersRouter.post('/', (req: Request, res: Response) => {
   const hunter = new HunterModel(req.body as Partial<HunterDocument>);
   hunter.save()
     .then(saved => res.status(201).json(saved))
@@ -49,7 +49,7 @@ huntersRouter.post('/hunters', (req: Request, res: Response) => {
  * GET /hunters?name=Geralt
  * GET /hunters?type=brujo
  */
-huntersRouter.get('/hunters', (req: Request, res: Response) => {
+huntersRouter.get('/', (req: Request, res: Response) => {
   const { name, type } = req.query;
   const filter: any = {};
   if (name) filter.name = name.toString();
@@ -80,7 +80,7 @@ huntersRouter.get('/hunters', (req: Request, res: Response) => {
  * @example
  * GET /hunters/507f1f77bcf86cd799439011
  */
-huntersRouter.get('/hunters/:id', (req: Request, res: Response) => {
+huntersRouter.get('/:id', (req: Request, res: Response) => {
   HunterModel.findById(req.params.id).exec()
     .then((hunter) => {
       if (!hunter) {
@@ -111,7 +111,7 @@ huntersRouter.get('/hunters/:id', (req: Request, res: Response) => {
  *   "coins": 5000
  * }
  */
-huntersRouter.patch('/hunters', (req: Request, res: Response) => {
+huntersRouter.patch('/', (req: Request, res: Response) => {
   if (!req.query.name) {
     res.status(400).send({ error: 'Se debe proporcionar un name en la query string' });
     return;        
@@ -163,7 +163,7 @@ huntersRouter.patch('/hunters', (req: Request, res: Response) => {
  *   "coins": 5000
  * }
  */
-huntersRouter.patch('/hunters/:id', (req: Request, res: Response) => {
+huntersRouter.patch('/:id', (req: Request, res: Response) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     res.status(400).send({ error: 'Debe proporcionar los campos a modificar en el body' });
     return;
@@ -206,7 +206,7 @@ huntersRouter.patch('/hunters/:id', (req: Request, res: Response) => {
  * @example
  * DELETE /hunters?name=Geralt
  */
-huntersRouter.delete('/hunters', (req: Request, res: Response) => {
+huntersRouter.delete('/', (req: Request, res: Response) => {
   if (!req.query.name) {
     res.status(400).send({ error: 'Se debe proporcionar un name en la query string' });
     return;
@@ -237,7 +237,7 @@ huntersRouter.delete('/hunters', (req: Request, res: Response) => {
  * @example
  * DELETE /hunters/507f1f77bcf86cd799439011
  */
-huntersRouter.delete('/hunters/:id', (req: Request, res: Response) => {
+huntersRouter.delete('/:id', (req: Request, res: Response) => {
   HunterModel.findByIdAndDelete(req.params.id).exec()
     .then((hunter) => {
       if (!hunter) {

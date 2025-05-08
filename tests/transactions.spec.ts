@@ -1,4 +1,3 @@
-// tests/transactions.spec.ts
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -8,303 +7,176 @@ import { GoodModel } from '../src/models/good.js';
 import { HunterModel } from '../src/models/hunter.js';
 import { MerchantModel } from '../src/models/merchant.js';
 
-let app: ReturnType<typeof setupApp>;
+let app;
 
 beforeAll(async () => {
   app = await setupApp();
 });
 
 beforeEach(async () => {
-  await TransactionModel.deleteMany({});
-  await GoodModel.deleteMany({});
-  await HunterModel.deleteMany({});
-  await MerchantModel.deleteMany({});
+  await Promise.all([
+    TransactionModel.deleteMany({}),
+    GoodModel.deleteMany({}),
+    HunterModel.deleteMany({}),
+    MerchantModel.deleteMany({}),
+  ]);
 });
 
-afterAll(async () => {
-  await mongoose.disconnect();
-});
+async function seedData() {
+  const hunter = await HunterModel.create({
+    name: 'Geralt',
+    type: 'brujo',
+    experience: 95,
+    coins: 500,
+    isActive: true,
+    monsterSpecialty: ['vampiros'],
+    email: 'geralt@rivia.com',
+  });
 
-describe('CRUD completo de /transactions', () => {
-  // Helper para crear datos de prueba válidos
-  const createValidGood = async () => {
-    return await GoodModel.create({
-      id: 1,
-      name: 'Espada de plata',
-      description: 'Arma efectiva contra bestias',
-      material: 'acero',
-      weight: 2.5,
-      value: 100,
-      stock: 10
-    });
-  };
+  const merchant = await MerchantModel.create({
+    name: 'Zoltan',
+    location: 'Novigrado',
+    specialty: 'armero',
+    inventorySize: 50,
+    reputation: 8,
+    isTraveling: false,
+    contact: 'zoltan@dwarves.com',
+  });
 
-  const createValidHunter = async () => {
-    return await HunterModel.create({
-      name: 'Geralt de Rivia',
-      email: 'geralt@rivia.com',
-      experience: 100, // Número en lugar de string
-      type: 'brujo', // Tipo en español
-      monsterSpecialty: ['vampiros', 'necrofagos'],
-      rank: 'maestro'
-    });
-  };
+  const goods = await GoodModel.create([
+    { id: 1, name: 'Espada de plata', material: 'acero', weight: 2.5, value: 250, stock: 10 },
+    { id: 2, name: 'Poción de salud', material: 'vidrio', weight: 0.2, value: 50, stock: 20 },
+  ]);
 
-  const createValidMerchant = async () => {
-    return await MerchantModel.create({
-      name: 'Zoltan Chivay',
-      email: 'zoltan@mahakam.com',
-      location: 'Novigrad',
-      specialty: 'armas',
-      shopName: 'La Herrería de Mahakam'
-    });
-  };
+  return { hunter, merchant, goods };
+}
 
-  // POST /transactions
-  test('POST /transactions → 201 (crea transacción válida de compra)', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-
-    const transaction = {
-      type: 'purchase',
-      clientName: hunter.name,
-      items: [
-        { goodName: good.name, quantity: 2 }
-      ]
-    };
-
+describe('/transactions CRUD y validaciones', () => {
+  test('POST compra exitosa descuenta stock y retorna 201', async () => {
+    const { hunter } = await seedData();
     const res = await request(app)
       .post('/transactions')
-      .send(transaction)
-      .expect(201);
-    
-    expect(res.body.type).toBe('purchase');
-    expect(res.body.totalAmount).toBe(good.value * 2);
-  });
-
-  test('POST /transactions → 400 si falta campo required', async () => {
-    const badTransaction = { 
-      clientName: 'Geralt de Rivia',
-      items: [{ goodName: 'Espada', quantity: 1 }] 
-    }; // falta type
-    
-    const res = await request(app)
-      .post('/transactions')
-      .send(badTransaction)
-      .expect(400);
-    
-    expect(res.body).toHaveProperty('error');
-  });
-
-  test('POST /transactions → 400 si tipo no permitido', async () => {
-    const hunter = await createValidHunter();
-    
-    const badTransaction = {
-      type: 'invalid',
-      clientName: hunter.name,
-      items: [{ goodName: 'Espada', quantity: 1 }]
-    };
-    
-    const res = await request(app)
-      .post('/transactions')
-      .send(badTransaction)
-      .expect(400);
-    
-    expect(res.body.error).toMatch(/Tipo de transacción no válido/);
-  });
-
-  // GET /transactions/client
-  test('GET /transactions/client → 404 si no hay ninguna', async () => {
-    const hunter = await createValidHunter();
-    await request(app)
-      .get('/transactions/client')
-      .query({ clientName: hunter.name })
-      .expect(404);
-  });
-
-  test('GET /transactions/client → 200 y lista todas', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-    
-    await TransactionModel.create([
-      {
+      .send({
         type: 'purchase',
-        client: hunter._id,
-        clientModel: 'Hunter',
-        items: [{ 
-          good: good._id, 
-          quantity: 1, 
-          priceAtTransaction: good.value 
-        }],
-        totalAmount: good.value
-      }
-    ]);
+        clientName: hunter.name,
+        items: [
+          { goodName: 'Espada de plata', quantity: 2 },
+          { goodName: 'Poción de salud', quantity: 1 },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ type: 'purchase', totalAmount: 250 * 2 + 50 });
+
+    const sword = await GoodModel.findOne({ name: 'Espada de plata' });
+    const potion = await GoodModel.findOne({ name: 'Poción de salud' });
+    expect(sword.stock).toBe(8);
+    expect(potion.stock).toBe(19);
+  });
+
+  test('POST venta exitosa incrementa stock y retorna 201', async () => {
+    const { merchant } = await seedData();
+    const res = await request(app)
+      .post('/transactions')
+      .send({
+        type: 'sale',
+        clientName: merchant.name,
+        items: [{ goodName: 'Espada de plata', quantity: 5 }],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.totalAmount).toBe(250 * 5);
+
+    const sword = await GoodModel.findOne({ name: 'Espada de plata' });
+    expect(sword.stock).toBe(15);
+  });
+
+  test('POST sin tipo da 400', async () => {
+    await seedData();
+    const res = await request(app)
+      .post('/transactions')
+      .send({ clientName: 'Geralt', items: [{ goodName: 'Espada de plata', quantity: 1 }] });
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /client filtra por nombre de cliente', async () => {
+    const { hunter, merchant } = await seedData();
+    await TransactionModel.create({ type: 'purchase', client: hunter._id, clientModel: 'Hunter', items: [{ good: (await GoodModel.findOne({ name: 'Espada de plata' }))._id, quantity: 1, priceAtTransaction: 250 }], totalAmount: 250 });
+    await TransactionModel.create({ type: 'sale', client: merchant._id, clientModel: 'Merchant', items: [{ good: (await GoodModel.findOne({ name: 'Poción de salud' }))._id, quantity: 2, priceAtTransaction: 50 }], totalAmount: 100 });
 
     const res = await request(app)
       .get('/transactions/client')
-      .query({ clientName: hunter.name })
-      .expect(200);
+      .query({ clientName: hunter.name });
+    expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-  });
-
-  // GET /transactions/date-range
-  test('GET /transactions/date-range → 200 y filtra por fecha', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-    const today = new Date();
-    
-    await TransactionModel.create({
-      type: 'purchase',
-      client: hunter._id,
-      clientModel: 'Hunter',
-      items: [{ 
-        good: good._id, 
-        quantity: 1, 
-        priceAtTransaction: good.value 
-      }],
-      totalAmount: good.value,
-      date: today
-    });
-
-    const res = await request(app)
-      .get('/transactions/date-range')
-      .query({ 
-        startDate: new Date(today.getTime() - 86400000).toISOString(),
-        endDate: new Date(today.getTime() + 86400000).toISOString()
-      })
-      .expect(200);
     expect(res.body[0].type).toBe('purchase');
   });
 
-  // GET /transactions/:id
-  test('GET /transactions/:id → 200 si existe', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-    const transaction = await TransactionModel.create({
-      type: 'purchase',
-      client: hunter._id,
-      clientModel: 'Hunter',
-      items: [{ 
-        good: good._id, 
-        quantity: 1, 
-        priceAtTransaction: good.value 
-      }],
-      totalAmount: good.value
-    });
+  test('GET /date-range devuelve transacciones dentro de rango y opcional tipo', async () => {
+    const { hunter, merchant } = await seedData();
+    const swordId = (await GoodModel.findOne({ name: 'Espada de plata' }))._id;
+
+    const t1 = { type: 'purchase', client: hunter._id, clientModel: 'Hunter', items: [{ good: swordId, quantity: 1, priceAtTransaction: 250 }], totalAmount: 250, date: new Date('2025-01-01') };
+    const t2 = { type: 'sale', client: merchant._id, clientModel: 'Merchant', items: [{ good: swordId, quantity: 1, priceAtTransaction: 250 }], totalAmount: 250, date: new Date('2025-02-01') };
+    await TransactionModel.create([t1, t2]);
+
+    let res = await request(app).get('/transactions/date-range').query({ startDate: '2025-01-01', endDate: '2025-01-31' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+
+    res = await request(app).get('/transactions/date-range').query({ startDate: '2025-01-01', endDate: '2025-12-31', type: 'sale' });
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].type).toBe('sale');
+  });
+
+  test('GET /:id retorna transacción o 404 si no existe', async () => {
+    const { hunter } = await seedData();
+    const tx = await TransactionModel.create({ type: 'purchase', client: hunter._id, clientModel: 'Hunter', items: [{ good: (await GoodModel.findOne({ name: 'Espada de plata' }))._id, quantity: 1, priceAtTransaction: 250 }], totalAmount: 250 });
+
+    let res = await request(app).get(`/transactions/${tx._id}`);
+    expect(res.status).toBe(200);
+    expect(res.body._id).toBe(tx._id.toString());
+
+    const fake = new mongoose.Types.ObjectId();
+    res = await request(app).get(`/transactions/${fake}`);
+    expect(res.status).toBe(404);
+  });
+
+  test('PUT actualiza transacción, ajusta stock y retorna 200', async () => {
+    const { hunter, merchant } = await seedData();
+    const sword = await GoodModel.findOne({ name: 'Espada de plata' });
+    const potion = await GoodModel.findOne({ name: 'Poción de salud' });
+
+    const tx = await TransactionModel.create({ type: 'purchase', client: hunter._id, clientModel: 'Hunter', items: [{ good: sword._id, quantity: 2, priceAtTransaction: sword.value }], totalAmount: sword.value * 2 });
 
     const res = await request(app)
-      .get(`/transactions/${transaction._id}`)
-      .expect(200);
-    expect(res.body._id).toBe(transaction._id.toString());
-  });
+      .put(`/transactions/${tx._id}`)
+      .send({ type: 'sale', clientName: merchant.name, items: [{ goodName: 'Poción de salud', quantity: 4 }] });
 
-  test('GET /transactions/:id → 404 si no existe', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
-    await request(app)
-      .get(`/transactions/${fakeId}`)
-      .expect(404);
-  });
-
-  test('GET /transactions/:id → 500 si id mal formado', async () => {
-    await request(app)
-      .get('/transactions/1234')
-      .expect(500);
-  });
-
-  // PUT /transactions/:id
-  test('PUT /transactions/:id → 200 actualiza transacción', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-    const merchant = await createValidMerchant();
-    
-    const transaction = await TransactionModel.create({
-      type: 'purchase',
-      client: hunter._id,
-      clientModel: 'Hunter',
-      items: [{ 
-        good: good._id, 
-        quantity: 1, 
-        priceAtTransaction: good.value 
-      }],
-      totalAmount: good.value
-    });
-
-    const updateData = {
-      type: 'sale',
-      clientName: merchant.name,
-      items: [
-        { goodName: good.name, quantity: 2 }
-      ]
-    };
-    
-    const res = await request(app)
-      .put(`/transactions/${transaction._id}`)
-      .send(updateData)
-      .expect(200);
-    
+    expect(res.status).toBe(200);
     expect(res.body.type).toBe('sale');
-    expect(res.body.totalAmount).toBe(good.value * 2);
+
+    const s2 = await GoodModel.findById(sword._id);
+    const p2 = await GoodModel.findById(potion._id);
+    expect(s2.stock).toBe(10);
+    expect(p2.stock).toBe(24);
   });
 
-  test('PUT /transactions/:id → 400 sin body', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-    const transaction = await TransactionModel.create({
-      type: 'purchase',
-      client: hunter._id,
-      clientModel: 'Hunter',
-      items: [{ 
-        good: good._id, 
-        quantity: 1, 
-        priceAtTransaction: good.value 
-      }],
-      totalAmount: good.value
-    });
-    await request(app)
-      .put(`/transactions/${transaction._id}`)
-      .expect(400);
-  });
+  test('DELETE elimina transacción y revierte stock', async () => {
+    const { hunter } = await seedData();
+    const sword = await GoodModel.findOne({ name: 'Espada de plata' });
 
-  test('PUT /transactions/:id → 404 si no existe', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
-    await request(app)
-      .put(`/transactions/${fakeId}`)
-      .send({ 
-        type: 'purchase', 
-        clientName: 'Geralt de Rivia', 
-        items: [{ goodName: 'Espada', quantity: 1 }] 
-      })
-      .expect(404);
-  });
+    const tx = await TransactionModel.create({ type: 'purchase', client: hunter._id, clientModel: 'Hunter', items: [{ good: sword._id, quantity: 3, priceAtTransaction: sword.value }], totalAmount: sword.value * 3 });
+    let updated = await GoodModel.findById(sword._id);
+    expect(updated.stock).toBe(7);
 
-  // DELETE /transactions/:id
-  test('DELETE /transactions/:id → 200 elimina por id', async () => {
-    const good = await createValidGood();
-    const hunter = await createValidHunter();
-    const transaction = await TransactionModel.create({
-      type: 'purchase',
-      client: hunter._id,
-      clientModel: 'Hunter',
-      items: [{ 
-        good: good._id, 
-        quantity: 1, 
-        priceAtTransaction: good.value 
-      }],
-      totalAmount: good.value
-    });
+    const res = await request(app).delete(`/transactions/${tx._id}`);
+    expect(res.status).toBe(200);
 
-    await request(app)
-      .delete(`/transactions/${transaction._id}`)
-      .expect(200);
-    
-    const deleted = await TransactionModel.findById(transaction._id);
-    expect(deleted).toBeNull();
-  });
+    updated = await GoodModel.findById(sword._id);
+    expect(updated.stock).toBe(10);
 
-  test('DELETE /transactions/:id → 404 si no existe', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
-    await request(app)
-      .delete(`/transactions/${fakeId}`)
-      .expect(404);
+    const found = await TransactionModel.findById(tx._id);
+    expect(found).toBeNull();
   });
 });

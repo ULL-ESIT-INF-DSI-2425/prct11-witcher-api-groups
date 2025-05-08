@@ -27,7 +27,7 @@ export const goodsRouter = express.Router();
  *   "value": 150
  * }
  */
-goodsRouter.post('/goods', (req: Request, res: Response) => {
+goodsRouter.post('/', (req: Request, res: Response) => {
   const good = new GoodModel(req.body as Partial<GoodDocument>);
   good.save()
     .then(saved => res.status(201).json(saved))
@@ -48,7 +48,7 @@ goodsRouter.post('/goods', (req: Request, res: Response) => {
  * GET /goods?name=Espada
  * GET /goods?description=afilada
  */
-goodsRouter.get('/goods', (req: Request, res: Response) => {
+goodsRouter.get('/', (req: Request, res: Response) => {
   const { name, description } = req.query;
   const filter: any = {};
   if (name) filter.name = name.toString();
@@ -79,7 +79,7 @@ goodsRouter.get('/goods', (req: Request, res: Response) => {
  * @example
  * GET /goods/507f1f77bcf86cd799439011
  */
-goodsRouter.get('/goods/:id', (req: Request, res: Response) => {
+goodsRouter.get('/:id', (req: Request, res: Response) => {
   GoodModel.findById(req.params.id).exec()
     .then((good) => {
       if (!good) {
@@ -110,7 +110,7 @@ goodsRouter.get('/goods/:id', (req: Request, res: Response) => {
  *   "weight": 2.8
  * }
  */
-goodsRouter.patch('/goods', (req: Request, res: Response) => {
+goodsRouter.patch('/', (req: Request, res: Response) => {
   if (!req.query.name) {
     res.status(400).send({ error: 'Se debe proporcionar un name en la query string' });
     return;        
@@ -162,7 +162,7 @@ goodsRouter.patch('/goods', (req: Request, res: Response) => {
  *   "weight": 2.8
  * }
  */
-goodsRouter.patch('/goods/:id', (req: Request, res: Response) => {
+goodsRouter.patch('/:id', (req: Request, res: Response) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     res.status(400).send({ error: 'Debe proporcionar los campos a modificar en el body' });
     return;
@@ -205,7 +205,7 @@ goodsRouter.patch('/goods/:id', (req: Request, res: Response) => {
  * @example
  * DELETE /goods?name=Espada
  */
-goodsRouter.delete('/goods', (req: Request, res: Response) => {
+goodsRouter.delete('/', (req: Request, res: Response) => {
   if (!req.query.name) {
     res.status(400).send({ error: 'Se debe proporcionar un name en la query string' });
     return;
@@ -236,7 +236,7 @@ goodsRouter.delete('/goods', (req: Request, res: Response) => {
  * @example
  * DELETE /goods/507f1f77bcf86cd799439011
  */
-goodsRouter.delete('/goods/:id', (req: Request, res: Response) => {
+goodsRouter.delete('/:id', (req: Request, res: Response) => {
   GoodModel.findByIdAndDelete(req.params.id).exec()
     .then((good) => {
       if (!good) {

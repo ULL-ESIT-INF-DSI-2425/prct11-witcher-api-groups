@@ -115,10 +115,6 @@ transactionsRouter.post('/', async (req: Request<Record<string, unknown>, object
         quantity: item.quantity,
         priceAtTransaction: good.value,
       });
-
-      // Actualizar stock según tipo de transacción
-      good.stock += type === 'purchase' ? -item.quantity : item.quantity;
-      await good.save();
     }
 
     // Crear y guardar la transacción

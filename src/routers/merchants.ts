@@ -28,7 +28,7 @@ export const merchantsRouter = express.Router();
  *   "inventorySize": 50
  * }
  */
-merchantsRouter.post('/merchants', (req: Request, res: Response) => {
+merchantsRouter.post('/', (req: Request, res: Response) => {
   const merchant = new MerchantModel(req.body as Partial<MerchantDocument>);
   merchant.save()
     .then(saved => res.status(201).json(saved))
@@ -49,7 +49,7 @@ merchantsRouter.post('/merchants', (req: Request, res: Response) => {
  * GET /merchants?name=Zoltan
  * GET /merchants?specialty=armero
  */
-merchantsRouter.get('/merchants', (req: Request, res: Response) => {
+merchantsRouter.get('/', (req: Request, res: Response) => {
   const { name, specialty } = req.query;
   const filter: any = {};
   if (name) filter.name = name.toString();
@@ -80,7 +80,7 @@ merchantsRouter.get('/merchants', (req: Request, res: Response) => {
  * @example
  * GET /merchants/507f1f77bcf86cd799439011
  */
-merchantsRouter.get('/merchants/:id', (req: Request, res: Response) => {
+merchantsRouter.get('/:id', (req: Request, res: Response) => {
   MerchantModel.findById(req.params.id).exec()
     .then((merchant) => {
       if (!merchant) {
@@ -111,7 +111,7 @@ merchantsRouter.get('/merchants/:id', (req: Request, res: Response) => {
  *   "inventorySize": 60
  * }
  */
-merchantsRouter.patch('/merchants', (req: Request, res: Response) => {
+merchantsRouter.patch('/', (req: Request, res: Response) => {
   if (!req.query.name) {
     res.status(400).send({ error: 'Se debe proporcionar un name en la query string' });
     return;        
@@ -163,7 +163,7 @@ merchantsRouter.patch('/merchants', (req: Request, res: Response) => {
  *   "inventorySize": 60
  * }
  */
-merchantsRouter.patch('/merchants/:id', (req: Request, res: Response) => {
+merchantsRouter.patch('/:id', (req: Request, res: Response) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     res.status(400).send({ error: 'Debe proporcionar los campos a modificar en el body' });
     return;
@@ -206,7 +206,7 @@ merchantsRouter.patch('/merchants/:id', (req: Request, res: Response) => {
  * @example
  * DELETE /merchants?name=Zoltan
  */
-merchantsRouter.delete('/merchants', (req: Request, res: Response) => {
+merchantsRouter.delete('/', (req: Request, res: Response) => {
   if (!req.query.name) {
     res.status(400).send({ error: 'Se debe proporcionar un name en la query string' });
     return;
@@ -237,7 +237,7 @@ merchantsRouter.delete('/merchants', (req: Request, res: Response) => {
  * @example
  * DELETE /merchants/507f1f77bcf86cd799439011
  */
-merchantsRouter.delete('/merchants/:id', (req: Request, res: Response) => {
+merchantsRouter.delete('/:id', (req: Request, res: Response) => {
   MerchantModel.findByIdAndDelete(req.params.id).exec()
     .then((merchant) => {
       if (!merchant) {

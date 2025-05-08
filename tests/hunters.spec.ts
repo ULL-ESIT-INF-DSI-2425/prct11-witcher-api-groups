@@ -1,9 +1,11 @@
-// tests/hunters.spec.ts
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { setupApp } from '../src/app.js';
 import { HunterModel } from '../src/models/hunter.js';
+import { GoodModel } from '../src/models/good.js';
+import { MerchantModel } from '../src/models/merchant.js';
+import { TransactionModel } from '../src/models/transaction.js';
 
 let app: ReturnType<typeof setupApp>;
 
@@ -12,16 +14,15 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await HunterModel.deleteMany({});
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
+  await Promise.all([
+    GoodModel.deleteMany({}),
+    HunterModel.deleteMany({}),
+    MerchantModel.deleteMany({}),
+    TransactionModel.deleteMany({}),
+  ]);
 });
 
 describe('CRUD completo de /hunters', () => {
-
-  // POST /hunters
   test('POST /hunters → 201 crea buen cazador válido', async () => {
     const hunter = {
       name: 'Geralt123',
@@ -70,7 +71,6 @@ describe('CRUD completo de /hunters', () => {
     expect(res.body.message).toMatch(/Debe tener al menos una especialidad en monstruos/);
   });
 
-  // GET /hunters
   test('GET /hunters → 404 si no hay ninguno', async () => {
     await request(app).get('/hunters').expect(404);
   });
@@ -96,7 +96,6 @@ describe('CRUD completo de /hunters', () => {
     expect(res.body[0].type).toBe('mercenario');
   });
 
-  // GET /hunters/:id
   test('GET /hunters/:id → 200 si existe', async () => {
     const doc = await HunterModel.create({ name: 'ById', type: 'aldeano', experience: 2, coins: 2, isActive: false, email: 'byid@example.com', monsterSpecialty: ['murciélagos'] });
     const res = await request(app).get(`/hunters/${doc._id}`).expect(200);
@@ -112,7 +111,6 @@ describe('CRUD completo de /hunters', () => {
     await request(app).get('/hunters/1234').expect(500);
   });
 
-  // PATCH /hunters?name=…
   test('PATCH /hunters?name=ByName → 200 modifica por name', async () => {
     await HunterModel.create({ name: 'ByName', type: 'brujo', experience: 10, coins: 10, isActive: true, email: 'byname@example.com', monsterSpecialty: ['zombis'] });
     const res = await request(app)
@@ -148,7 +146,6 @@ describe('CRUD completo de /hunters', () => {
       .expect(404);
   });
 
-  // PATCH /hunters/:id
   test('PATCH /hunters/:id → 200 modifica por id', async () => {
     const doc = await HunterModel.create({ name: 'IdName', type: 'mercenario', experience: 30, coins: 30, isActive: true, email: 'idname@example.com', monsterSpecialty: ['hadas'] });
     const res = await request(app)
@@ -179,7 +176,6 @@ describe('CRUD completo de /hunters', () => {
       .expect(404);
   });
 
-  // DELETE /hunters?name=…
   test('DELETE /hunters?name=ValidName → 200 elimina por name', async () => {
     await HunterModel.create({ name: 'ValidDel', type: 'mercenario', experience: 5, coins: 5, isActive: true, email: 'validdel@example.com', monsterSpecialty: ['huesos'] });
     await request(app).delete('/hunters').query({ name: 'ValidDel' }).expect(200);
@@ -194,7 +190,6 @@ describe('CRUD completo de /hunters', () => {
     await request(app).delete('/hunters').query({ name: 'Nope' }).expect(404);
   });
 
-  // DELETE /hunters/:id
   test('DELETE /hunters/:id → 200 elimina por id', async () => {
     const doc = await HunterModel.create({ name: 'XIdDel', type: 'aldeano', experience: 2, coins: 2, isActive: false, email: 'xiddel@example.com', monsterSpecialty: ['murciélagos'] });
     await request(app).delete(`/hunters/${doc._id}`).expect(200);
@@ -209,5 +204,4 @@ describe('CRUD completo de /hunters', () => {
   test('DELETE /hunters/:id → 400 id mal formado', async () => {
     await request(app).delete('/hunters/1234').expect(400);
   });
-
 });

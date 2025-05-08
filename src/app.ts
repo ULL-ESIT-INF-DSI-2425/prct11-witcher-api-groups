@@ -12,10 +12,10 @@ const app = express();
 app.use(express.json());
 
 // **2. Tus routers**
-app.use(goodsRouter);
-app.use(merchantsRouter);
-app.use(huntersRouter);
-app.use(transactionsRouter);
+app.use('/goods', goodsRouter);
+app.use('/hunters', huntersRouter);
+app.use('/merchants', merchantsRouter);
+app.use('/transactions', transactionsRouter);
 app.use(defaultRouter);
 
 /**  

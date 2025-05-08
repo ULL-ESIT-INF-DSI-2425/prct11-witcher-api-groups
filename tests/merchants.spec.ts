@@ -1,9 +1,11 @@
-// tests/merchants.spec.ts
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { setupApp } from '../src/app.js';
 import { MerchantModel } from '../src/models/merchant.js';
+import { GoodModel } from '../src/models/good.js';
+import { HunterModel } from '../src/models/hunter.js';
+import { TransactionModel } from '../src/models/transaction.js';
 
 let app: ReturnType<typeof setupApp>;
 
@@ -12,16 +14,15 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await MerchantModel.deleteMany({});
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
+  await Promise.all([
+    GoodModel.deleteMany({}),
+    HunterModel.deleteMany({}),
+    MerchantModel.deleteMany({}),
+    TransactionModel.deleteMany({}),
+  ]);
 });
 
 describe('CRUD completo de /merchants', () => {
-
-  // POST /merchants
   test('POST /merchants → 201 crea buen mercader válido', async () => {
     const merchant = {
       name: 'Merch1',
@@ -69,7 +70,6 @@ describe('CRUD completo de /merchants', () => {
     expect(res.body.message).toMatch(/no es un email válido/);
   });
 
-  // GET /merchants
   test('GET /merchants → 404 si no hay ninguno', async () => {
     await request(app).get('/merchants').expect(404);
   });
@@ -95,7 +95,6 @@ describe('CRUD completo de /merchants', () => {
     expect(res.body[0].specialty).toBe('armero');
   });
 
-  // GET /merchants/:id
   test('GET /merchants/:id → 200 si existe', async () => {
     const doc = await MerchantModel.create({ name: 'ById', location: 'Velen', specialty: 'mercachifle', isTraveling: false, inventorySize: 5, reputation: 2, contact: 'byid@ex.com' });
     const res = await request(app).get(`/merchants/${doc._id}`).expect(200);
@@ -111,7 +110,6 @@ describe('CRUD completo de /merchants', () => {
     await request(app).get('/merchants/1234').expect(500);
   });
 
-  // PATCH /merchants?name=…
   test('PATCH /merchants?name=ByName → 200 modifica por name', async () => {
     await MerchantModel.create({ name: 'ByName', location: 'Novigrado', specialty: 'herrero', isTraveling: false, inventorySize: 20, reputation: 7, contact: 'byname@ex.com' });
     const res = await request(app)
@@ -147,7 +145,6 @@ describe('CRUD completo de /merchants', () => {
       .expect(404);
   });
 
-  // PATCH /merchants/:id
   test('PATCH /merchants/:id → 200 modifica por id', async () => {
     const doc = await MerchantModel.create({ name: 'IdName', location: 'Cintra', specialty: 'alquimista', isTraveling: true, inventorySize: 18, reputation: 6, contact: 'idname@ex.com' });
     const res = await request(app)
@@ -178,7 +175,6 @@ describe('CRUD completo de /merchants', () => {
       .expect(404);
   });
 
-  // DELETE /merchants?name=…
   test('DELETE /merchants?name=ValidName → 200 elimina por name', async () => {
     await MerchantModel.create({ name: 'ValidDel', location: 'Velen', specialty: 'mercachifle', isTraveling: false, inventorySize: 5, reputation: 2, contact: 'validdel@ex.com' });
     await request(app).delete('/merchants').query({ name: 'ValidDel' }).expect(200);
@@ -193,7 +189,6 @@ describe('CRUD completo de /merchants', () => {
     await request(app).delete('/merchants').query({ name: 'Nope' }).expect(404);
   });
 
-  // DELETE /merchants/:id
   test('DELETE /merchants/:id → 200 elimina por id', async () => {
     const doc = await MerchantModel.create({ name: 'XIdDel', location: 'Novigrado', specialty: 'sastre', isTraveling: true, inventorySize: 12, reputation: 9, contact: 'xiddel@ex.com' });
     await request(app).delete(`/merchants/${doc._id}`).expect(200);
@@ -208,5 +203,4 @@ describe('CRUD completo de /merchants', () => {
   test('DELETE /merchants/:id → 400 id mal formado', async () => {
     await request(app).delete('/merchants/1234').expect(400);
   });
-
 });
