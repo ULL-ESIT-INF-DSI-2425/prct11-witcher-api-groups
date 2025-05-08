@@ -1,12 +1,11 @@
-// typedoc.json
 {
-  "entryPoints": ["src"],          // sólo la carpeta src
-  "out": "docs",                   // donde generar la doc
+  "entryPoints": ["src/**/*.ts"],  
+  "out": "docs",               
   "exclude": [
-    "**/*.spec.ts",                // excluye tests
-    "**/vitest.config.ts"          // excluye tu config de Vitest
+    "**/*.spec.ts",             
+    "**/vitest.config.ts"        
   ],
-  "tsconfig": "tsconfig.json",     // tu tsconfig normal
+  "tsconfig": "tsconfig.json",    
   "excludePrivate": true,
   "excludeInternal": true
 }
