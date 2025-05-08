@@ -8,4 +8,6 @@
 ## Objetivo
 El objetivo de esta práctica es aprender a utilizar una API REST para simular una posada en el Universo de The Witcher.
 ## Despliegue en Render
-https://prct11-witcher-api-groups-slxa.onrender.com/goods/
+https://prct11-witcher-api-groups-slxa.onrender.com/
+
+En la documentación del proyecto se muestran ejemplos de cómo utilizar la API.
