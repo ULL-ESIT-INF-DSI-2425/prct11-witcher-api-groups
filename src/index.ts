@@ -8,7 +8,7 @@ async function main() {
   });
 }
 
-main().catch(err => {
-  console.error('Error arrancando servidor:', err);
+main().catch((err) => {
+  console.error("Error arrancando servidor:", err);
   process.exit(1);
 });

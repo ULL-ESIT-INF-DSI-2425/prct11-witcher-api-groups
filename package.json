@@ -10,7 +10,8 @@
     "coverage": "vitest run --coverage --coverage.include src/controllers/*",
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc-watch --onSuccess \"env-cmd -f ./config/dev.env node dist/index.js\""
+    "dev": "tsc-watch --onSuccess \"env-cmd -f ./config/dev.env node dist/index.js\"",
+    "documentation": "http-server ./docs"
   },
   "repository": {
     "type": "git",
