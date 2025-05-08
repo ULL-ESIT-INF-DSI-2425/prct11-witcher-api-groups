@@ -1,16 +1,17 @@
 // vitest.config.ts
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    // Solo puntos y sin mensajes de tus hooks
-    reporters: ['dot'],
-    silent: true,
-    // Aquí va toda la config de coverage
+    // (opcional) ejecutar sólo el index.spec.ts
+    include: ['tests/index.spec.ts'],
+
     coverage: {
-      provider: 'v8',
-      include: ['src/**/*.{ts,js}'],   // cubre todo tu código fuente
-      reporter: ['text'],              // imprime solo la tabla textual
+      provider: 'v8',                  // usa v8
+      reporter: ['text', 'lcov'],      // primero la tabla en consola, luego lcov.info
+      include: ['src/routers/**'],     // lo que tú quieras cubrir
+      all: true,                       // si quieres ver incluso archivos sin tests
+      reportsDirectory: 'coverage',    // carpeta de salida
     },
   },
-});
+})
