@@ -1,4 +1,4 @@
-name: SonarQube-Cloud 
+name: SonarQube-Cloud
 
 on:
   push:
@@ -10,29 +10,45 @@ jobs:
   sonarqube:
     name: SonarQube
     runs-on: ubuntu-latest
+    timeout-minutes: 15        # le damos hasta 15 min para que acabe si es necesario
     steps:
-      - name: Git checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # para que encuentre todas las ramas/etiquetas si hiciera falta
 
-      - name: Use Node.js 23.x
+      - name: Set up Node.js 23.x
         uses: actions/setup-node@v4
         with:
           node-version: 23.x
           cache: 'npm'
+
+      - name: Install Java (para el scanner de SonarQube)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'    # SonarCloud recomienda Java 11+
 
       - name: Start MongoDB 8.0
         uses: supercharge/mongodb-github-action@1.12.0
         with:
           mongodb-version: '8.0'
 
-      - name: Install dependencies 
-        run: npm ci 
+      - name: Install dependencies
+        run: npm ci
 
       - name: Generate coverage info
-        run: npm run coverage 
+        run: npm run coverage
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectBaseDir: '.'     # carpeta raíz de tu proyecto
+          # opcionalmente puedes pasar aquí args extra, por ejemplo:
+          # args: >
+          #   -Dsonar.sources=src
+          #   -Dsonar.tests=tests
+          #   -Dsonar.test.inclusions=tests/**/*.spec.ts
