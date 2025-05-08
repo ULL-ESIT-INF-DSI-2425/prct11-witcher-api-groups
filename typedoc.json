@@ -5,6 +5,7 @@
     "**/*.spec.ts",             
     "**/vitest.config.ts"        
   ],
+  "readme": "README.md",
   "tsconfig": "tsconfig.json",    
   "excludePrivate": true,
   "excludeInternal": true
